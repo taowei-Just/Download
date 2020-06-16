@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -51,13 +52,14 @@ public class FileListAdapter extends BaseAdapter {
     public View getView(int i, View view, ViewGroup viewGroup) {
         ViewHolder holder;
         final FileInfo fileInfo = mFileList.get(i);
-        if (view == null) {
             view = LayoutInflater.from(mContext).inflate(R.layout.listitem, null);
             holder = new ViewHolder();
             holder.btStart = view.findViewById(R.id.btStart);
             holder.btStop = view.findViewById(R.id.btStop);
             holder.pbFile = view.findViewById(R.id.pbProgress);
             holder.tvFile = view.findViewById(R.id.tvFileName);
+            holder.btReDownload = view.findViewById(R.id.btReDownload);
+            holder.btDelete = view.findViewById(R.id.btDelete);
             //设置控件
             holder.tvFile.setText(fileInfo.getFileName());
             holder.pbFile.setMax(100);
@@ -86,24 +88,52 @@ public class FileListAdapter extends BaseAdapter {
                         e.printStackTrace();
                     }
                 }
+            }); 
+            holder.btReDownload.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Message msg = new Message();
+                    msg.what = DownloadService.MSG_RESTART;
+                    msg.obj = fileInfo;
+                    try {
+                        mMessenger.send(msg);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }); holder.btDelete.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Message msg = new Message();
+                    msg.what = DownloadService.MSG_DELETE;
+                    msg.obj = fileInfo;
+                    try {
+                        mMessenger.send(msg);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
             });
-            view.setTag(holder);
-        } else {
-            holder = (ViewHolder) view.getTag();
-        }
+        
+        holder.pbFile.setTag(fileInfo.getUrl());
         holder.pbFile.setProgress(fileInfo.getFinished());
         return view;
     }
 
-    public void updateProgress(int id, int progress) {
+    public void updateProgress(ListView mLvFile, int id, int progress) {
         FileInfo fileInfo = mFileList.get(id);
         fileInfo.setFinished(progress);
-        notifyDataSetChanged();
+        ProgressBar bar = (ProgressBar) mLvFile.findViewWithTag(fileInfo.getUrl());
+        if (bar!=null){
+            bar.setProgress(fileInfo.getFinished());
+        }
+
     }
 
     static class ViewHolder {
+        public View btDelete;
         private TextView tvFile;
-        private Button btStart, btStop;
+        private Button btStart, btStop,btReDownload;
         private ProgressBar pbFile;
 
     }

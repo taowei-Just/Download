@@ -19,6 +19,7 @@
         android:layout_alignLeft="@+id/tvFileName"
         android:layout_below="@+id/tvFileName"/>
 
+
     <Button
         android:id="@+id/btStop"
         style="?android:buttonStyleSmall"
@@ -36,6 +37,20 @@
         android:layout_toLeftOf="@id/btStop"
         android:layout_below="@id/pbProgress"
         android:text="下载"/>
-
+    <Button
+        android:id="@+id/btReDownload"
+        style="?android:buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/btStart"
+        android:layout_below="@id/pbProgress"
+        android:text="重新下载"/>    <Button
+        android:id="@+id/btDelete"
+        style="?android:buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/btReDownload"
+        android:layout_below="@id/pbProgress"
+        android:text="删除"/>
 
 </RelativeLayout>
