@@ -1,6 +1,7 @@
 package com.tao.mydownloadlibrary.helper;
 
 import android.content.Context;
+import android.os.Build;
 import android.text.TextUtils;
 
 import com.tao.mydownloadlibrary.DownloadStatue;
@@ -48,35 +49,79 @@ public class DownloadHelper implements IDownloader {
     private int defaultCount = 2048;
 
 
-    public DownloadHelper(Build build) {
-        this.build = build;
-        perparePool = Executors.newFixedThreadPool(build.missionCount);
-        downloadPool = Executors.newFixedThreadPool(build.missionCount * build.taskCount);
+    private DownloadHelper() {
+
         loadInfoPool = Executors.newSingleThreadExecutor();
     }
 
-    public static synchronized DownloadHelper getInstance(Context context) {
-        return getInstance(new Build(context));
+
+    public void init(Build build) {
+        if (null == build)
+            return;
+        this.build = build;
+        initPool(build);
     }
 
-    public static synchronized DownloadHelper getInstance(Build build) {
+    private void initPool(Build build) {
+        if (perparePool != null)
+            perparePool.shutdownNow();
+        perparePool = Executors.newFixedThreadPool(build.missionCount);
+
+        if (downloadPool != null)
+            downloadPool.shutdownNow();
+        downloadPool = Executors.newFixedThreadPool(build.missionCount * build.taskCount);
+    }
+
+    public void init(Context context) {
+        if (null == context)
+            return;
+        this.build = this.build == null ? createDefaultBuild(context) : this.build;
+
+        initPool(build);
+        
+    }
+
+    public Build createDefaultBuild(Context context) {
+        return new Build(context);
+    }
+
+    
+    public static synchronized DownloadHelper getInstance() {
         if (downloadHelper == null) {
             synchronized (DownloadHelper.class) {
                 if (downloadHelper == null) {
-                    downloadHelper = new DownloadHelper(build);
+                    downloadHelper = new DownloadHelper();
                 }
             }
         }
         return downloadHelper;
     }
 
-    private void deleteDownloadLine(final String url) {
+//    public void deleteDownloadInfoByUrl(String url) {
+//        deleteDownloadLine(url);
+//    }
 
+
+    public void deleteDownloadLine(final String url) {
         String tag = MD5Util.md5(url);
+        deleteDownloadLineByTag(tag);
+    }
+
+    private void deleteDownloadLineByTag(String tag) {
         BufferedReader bufferedReader = null;
 
         File file1 = new File(build.configPath);
         File file2 = new File(build.configPath + ".cache");
+        
+        if (!file2.exists())
+        {
+            file2.getParentFile().mkdirs();
+            try {
+                file2.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         try {
             bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file1)));
             String line = null;
@@ -116,10 +161,7 @@ public class DownloadHelper implements IDownloader {
         loadInfoPool.execute(new Runnable() {
             @Override
             public void run() {
-                stopDownload(url);
-                // 删除配置文件重新下载
-                DownloadInfo downloadRecode = checkDownloadRecode(url);
-                deleteDownloadInfo(downloadRecode);
+                DownloadInfo downloadRecode = deleteDownloadInfo(url, false);
 
                 if (recodeVaild(downloadRecode)) {
                     addDownload(url, downloadRecode.getPath(), downloadRecode.getFileName(), downloadCall);
@@ -132,16 +174,22 @@ public class DownloadHelper implements IDownloader {
 
     }
 
-    private void deleteDownloadInfo(DownloadInfo downloadRecode) {
+    private DownloadInfo deleteDownloadInfo(String url, boolean retain) {
+        stopDownload(url);
+        // 删除配置文件重新下载
+        DownloadInfo downloadRecode = checkDownloadRecode(url);
+        deleteDownloadInfo(downloadRecode, retain );
+        return downloadRecode;
+    }
+
+    private void deleteDownloadInfo(DownloadInfo downloadRecode, boolean retain) {
         if (downloadRecode == null)
             return;
         File file2 = new File(downloadRecode.getPath() + File.separator + "downloadInfos" + File.separator + downloadRecode.getDownloadTag() + ".info");
         if (file2.exists()) {
             file2.delete();
         }
-        File file = new File(downloadRecode.getPath(), downloadRecode.getFileName());
-        if (file.exists())
-            file.delete();
+
         List<TaskInfo> taskInfos = downloadRecode.getTaskInfos();
         if (taskInfos == null)
             return;
@@ -152,6 +200,13 @@ public class DownloadHelper implements IDownloader {
             if (file1.exists())
                 file1.delete();
         }
+
+        if (retain)
+            return;
+
+        File file = new File(downloadRecode.getPath(), downloadRecode.getFileName());
+        if (file.exists())
+            file.delete();
     }
 
     public void addDownload(String url, DownloadCall downloadCall) {
@@ -300,7 +355,6 @@ public class DownloadHelper implements IDownloader {
                         }
                     }
                 }
-//                WriteStreamAppend.method1(file2.getAbsolutePath(), line + "\n");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -313,8 +367,7 @@ public class DownloadHelper implements IDownloader {
                     e1.printStackTrace();
                 }
             }
-//            file1.delete();
-//            file2.renameTo(file1);
+
         }
         return downloadInfo;
     }
@@ -408,15 +461,24 @@ public class DownloadHelper implements IDownloader {
             @Override
             public void run() {
                 stopDownload(url);
-                DownloadInfo downloadInfo = checkDownloadRecode(url);
-                if (downloadInfo == null) {
-                    deleteDownloadLine(url);
-                    return;
-                }
-                deleteDownloadInfo(downloadInfo);
-                File file = new File(downloadInfo.getPath(), downloadInfo.getFileName());
-                if (file.exists())
-                    file.delete();
+                deleteDownloadInfo(url, false);
+                deleteDownloadLine(url);
+
+            }
+        });
+
+    }
+
+    public void deleteDownloadOnlyInfo(final String url) {
+        loadInfoPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                stopDownload(url);
+//                DownloadInfo downloadInfo = checkDownloadRecode(url);
+//                deleteDownloadInfo(downloadInfo);
+                deleteDownloadInfo(url, true);
+                deleteDownloadLine(url);
+
             }
         });
 
@@ -504,8 +566,8 @@ public class DownloadHelper implements IDownloader {
         @Override
         public void onCompleted(TaskInfo info) {
 //            Lg.ii("MyDownloadCall onCompleted ", info.getUrl());
-            
-            
+
+
             callCompleted(info);
         }
 
@@ -550,7 +612,7 @@ public class DownloadHelper implements IDownloader {
         downloadInfo.setStatue(DownloadStatue.complete);
         downloadInfo.setProgress(loadTaskProgress(taskInfos));
         saveDwnloadInfo2File(downloadInfo);
- 
+
 
         if (downloadInfo.getProgress() >= downloadInfo.getTotalLenth()) {
             downloadInfoMap.remove(info.getDownloadTag());
@@ -687,7 +749,7 @@ public class DownloadHelper implements IDownloader {
                 file.getParentFile().mkdirs();
                 file.createNewFile();
             }
-            String str = downloadInfo.getDownloadTag() + ":" + new File(build.context.getExternalCacheDir() +File.separator +"download"+ File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
+            String str = downloadInfo.getDownloadTag() + ":" + new File(build.context.getExternalCacheDir() + File.separator + "download" + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
 //            Lg.e(str);
             WriteStreamAppend.method1(file.getAbsolutePath(), str + "\n");
 //            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file ,true)));
@@ -706,7 +768,7 @@ public class DownloadHelper implements IDownloader {
 //        Lg.e(s);
         FileOutputStream outputStream = null;
         try {
-            File file = new File(build.context.getExternalCacheDir() +File.separator +"download"+File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info");
+            File file = new File(build.context.getExternalCacheDir() + File.separator + "download" + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info");
             if (!file.exists()) {
                 file.getParentFile().mkdirs();
                 file.createNewFile();
@@ -740,9 +802,9 @@ public class DownloadHelper implements IDownloader {
 
         public Build(Context context) {
             this.context = context.getApplicationContext();
-            cachePath = context.getExternalCacheDir() + File.separator +"download"+File.separator +"caches"+File.separator;
-            rootPath = context.getExternalFilesDir(null).getAbsolutePath()+ File.separator +"download"+File.separator;
-            configPath = context.getFilesDir() + File.separator +"download"+File.separator+ "download.config";
+            cachePath = context.getExternalCacheDir() + File.separator + "download" + File.separator + "caches" + File.separator;
+            rootPath = context.getExternalFilesDir(null).getAbsolutePath() + File.separator + "download" + File.separator;
+            configPath = context.getFilesDir() + File.separator + "download" + File.separator + "download.config";
         }
 
         public Build setContext(Context context) {
