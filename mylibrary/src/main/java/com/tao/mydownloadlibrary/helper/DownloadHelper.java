@@ -3,6 +3,7 @@ package com.tao.mydownloadlibrary.helper;
 import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.tao.mydownloadlibrary.DownloadStatue;
 import com.tao.mydownloadlibrary.callback.DownloadCall;
@@ -37,21 +38,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class DownloadHelper implements IDownloader {
+    private Map<String, DownloadInfo> downloadInfoMap = new HashMap<>();
+    private Map<String, List<TaskInfo>> taskInfoMap = new HashMap<>();
+    private Map<String, List<Future>> futureMap = new HashMap<>();
     private static DownloadHelper downloadHelper;
     private final ExecutorService loadInfoPool;
-    private ExecutorService perparePool;
     private ExecutorService downloadPool;
-    private Build build;
-    Map<String, DownloadInfo> downloadInfoMap = new HashMap<>();
-    Map<String, List<TaskInfo>> taskInfoMap = new HashMap<>();
-    Map<String, List<Future>> futureMap = new HashMap<>();
-    long lastProgressTime;
+    private ExecutorService perparePool;
     private int defaultCount = 2048;
-
+    private long lastProgressTime;
+    private Build build;
+    private String tag =getClass().getSimpleName();
 
     private DownloadHelper() {
-
-        loadInfoPool = Executors.newSingleThreadExecutor();
+        loadInfoPool = Executors.newFixedThreadPool(10);
     }
 
 
@@ -63,29 +63,35 @@ public class DownloadHelper implements IDownloader {
     }
 
     private void initPool(Build build) {
+
+        for (String s : downloadInfoMap.keySet()) {
+            stopDownload(downloadInfoMap.get(s).getUrl());
+        }
+
         if (perparePool != null)
             perparePool.shutdownNow();
         perparePool = Executors.newFixedThreadPool(build.missionCount);
 
         if (downloadPool != null)
             downloadPool.shutdownNow();
-        downloadPool = Executors.newFixedThreadPool(build.missionCount * build.taskCount);
+
+        int nThreads = build.missionCount * build.taskCount;
+//        Log.e(tag , "downloadPool size  " +nThreads);
+        downloadPool = Executors.newFixedThreadPool(nThreads);
     }
 
     public void init(Context context) {
         if (null == context)
             return;
         this.build = this.build == null ? createDefaultBuild(context) : this.build;
-
         initPool(build);
-        
     }
 
     public Build createDefaultBuild(Context context) {
         return new Build(context);
     }
 
-    
+
     public static synchronized DownloadHelper getInstance() {
         if (downloadHelper == null) {
             synchronized (DownloadHelper.class) {
@@ -112,9 +118,8 @@ public class DownloadHelper implements IDownloader {
 
         File file1 = new File(build.configPath);
         File file2 = new File(build.configPath + ".cache");
-        
-        if (!file2.exists())
-        {
+
+        if (!file2.exists()) {
             file2.getParentFile().mkdirs();
             try {
                 file2.createNewFile();
@@ -178,7 +183,7 @@ public class DownloadHelper implements IDownloader {
         stopDownload(url);
         // 删除配置文件重新下载
         DownloadInfo downloadRecode = checkDownloadRecode(url);
-        deleteDownloadInfo(downloadRecode, retain );
+        deleteDownloadInfo(downloadRecode, retain);
         return downloadRecode;
     }
 
@@ -434,6 +439,7 @@ public class DownloadHelper implements IDownloader {
         for (int i = 0; i < taskInfoS.size(); i++) {
             Future<?> future = downloadPool.submit(new DownloadTask(taskInfoS.get(i), new MyDownloadCall()));
             futureList.add(future);
+//            Log.e(tag, "submit DownloadTask "  + taskInfoS.get(i).getCacheFile());
         }
         downloadInfo.setStatue(DownloadStatue.downloading);
         saveDwnloadInfo(downloadInfo);
@@ -447,6 +453,8 @@ public class DownloadHelper implements IDownloader {
     }
 
     public void stopDownload(String url) {
+        if (url == null)
+            return;
         String s = MD5Util.md5(url);
         if (futureMap.containsKey(s)) {
             cancelTask(s);

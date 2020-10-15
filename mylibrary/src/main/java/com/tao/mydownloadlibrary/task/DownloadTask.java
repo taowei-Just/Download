@@ -26,7 +26,7 @@ public class DownloadTask implements Runnable {
     @Override
     public void run() {
         try {
-//            Lg.e(tag, "run  " + info);
+//            Lg.e(tag, "DownloadTask  run  " + info.getCacheFile());
             if (info.getOffeset() == info.getFileLen()) {
                 downloadCall.onCompleted(info);
                 return;

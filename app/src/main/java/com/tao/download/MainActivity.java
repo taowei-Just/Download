@@ -33,22 +33,27 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initEvent();
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0001);
+        DownloadHelper.getInstance().init(DownloadHelper.getInstance()
+                .createDefaultBuild(this)
+                .setTaskCount(3)
+                .setMissionCount(3)
+        );
+
     }
 
     private void initEvent() {
-        DownloadHelper.getInstance().init(this);
 
         mFileList = new ArrayList<>();
         String apkurl = "https://eb28948de3ce12e2d6f5dcbfba826b2f.dlied1.cdntips.net/imtt.dd.qq.com/16891/apk/5B69939E818E263742A1EE2E3C93E64C.apk?mkey=5f879ac5b7dac4cd&f=0ef9&fsname=com.tencent.mtt_10.8.5.8430_10858430.apk&csr=1bbd&cip=183.218.226.56&proto=https";
         mFileList.add(apkurl);
         String String4 = "http://wap.apk.anzhi.com/data5/apk/201905/13/com.dkj.show.muse_50919000.apk";
-        mFileList.add(String4);
-
-        String4 = "http://yapkwww.cdn.anzhi.com/data3/apk/201703/22/com.sec.pcw_03075100.apk";
-        mFileList.add(String4);
-
-        String4 = "http://wap.apk.anzhi.com/data5/apk/202003/09/84975c45d1ddcb9a9d6de9699c643cb5_68778700.apk";
-        mFileList.add(String4);
+//        mFileList.add(String4);
+//
+//        String4 = "http://yapkwww.cdn.anzhi.com/data3/apk/201703/22/com.sec.pcw_03075100.apk";
+//        mFileList.add(String4);
+//
+//        String4 = "http://wap.apk.anzhi.com/data5/apk/202003/09/84975c45d1ddcb9a9d6de9699c643cb5_68778700.apk";
+//        mFileList.add(String4);
 //
 //        String4 = "http://wap.apk.anzhi.com/data5/apk/202004/10/0cb1a83a628ee0df19172f542c9d2fee_42653900.apk";
 //        mFileList.add(String4);
@@ -61,8 +66,8 @@ public class MainActivity extends AppCompatActivity {
 //        mFileList.add(String4);
 //        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/08/032eaece8750c4e297bcb6c047ec1324_83453500.apk";
 //        mFileList.add(String4);
-//        String4 = "http://wap.apk.anzhi.com/data5/apk/202005/14/5bc8969e2fdecf06e98960d33da58a29_87828300.apk";
-//        mFileList.add(String4);
+        String4 = "http://wap.apk.anzhi.com/data5/apk/202005/14/5bc8969e2fdecf06e98960d33da58a29_87828300.apk";
+        mFileList.add(String4);
 //        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/01/692acdc9a9779f872b98d6eb148f59e2_92027500.apk";
 //        mFileList.add(String4);
 
@@ -72,18 +77,19 @@ public class MainActivity extends AppCompatActivity {
     public void delete(View view) {
         DownloadRecode downloadRecode = DownloadHelper.getInstance().listDownloadRecode();
         List<DownloadInfo> infoList = downloadRecode.getInfoList();
-        if (infoList.size()==0)
+        if (infoList.size() == 0)
             return;
-        
-        DownloadHelper.getInstance().deleteDownloadOnlyInfo(infoList.get(0).getUrl());
+
+        DownloadHelper.getInstance().deleteDownload(infoList.get(0).getUrl());
 
     }
+
     public void test(View view) {
         downloadCall = new DownloadCall() {
             @Override
             public void onProgress(DownloadInfo downloadInfo) {
 
-                Log.e(tag, "onProgress " + downloadInfo.getFilePath() + "   " + downloadInfo.getProgressPersent() + "%");
+                Log.e(tag, "onProgress " + downloadInfo.getFilePath() + "   " + downloadInfo.getProgressPersent() + "%"   + " " +Thread.currentThread().getName());
             }
 
             @Override
@@ -111,14 +117,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPrepare(DownloadInfo downloadInfo) {
-                Log.e(tag, "onPrepare " + downloadInfo.getFilePath());
+                Log.e(tag, "onPrepare " + downloadInfo.getFilePath() + downloadInfo.getFileName());
 
             }
         };
         for (int i = 0; i < mFileList.size(); i++) {
             String String = mFileList.get(i);
             DownloadHelper.getInstance().addDownload(String, downloadCall);
-            
+
             //            if (i==3)
             //                return;
 
