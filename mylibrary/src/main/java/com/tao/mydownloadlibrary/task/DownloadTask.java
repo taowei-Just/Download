@@ -77,7 +77,7 @@ public class DownloadTask implements Runnable {
             execute.body().close();
         } catch (Exception e) {
             e.printStackTrace();
-            Lg.e(tag, info);
+//            Lg.e(tag, info);
             downloadCall.onError(info);
         }
     }

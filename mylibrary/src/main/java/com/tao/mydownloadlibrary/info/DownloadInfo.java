@@ -9,7 +9,7 @@ import com.tao.mydownloadlibrary.utils.MD5Util;
 
 import java.util.List;
 
- 
+
 public class DownloadInfo {
     @Expose
     String downloadTag;
@@ -37,11 +37,13 @@ public class DownloadInfo {
     @Expose(serialize = false, deserialize = false)
     DownloadCall downloadCall;
     @Expose
-    String md5 ;
+    String md5;
     @Expose
     List<TaskInfo> taskInfos;
     @Expose
-    int progressPersent ;
+    int progressPersent;
+    private String cachePath;
+
 
     public DownloadInfo(String url) throws Exception {
         boolean empty = false;
@@ -52,11 +54,15 @@ public class DownloadInfo {
         }
 
         if (empty) {
-                throw new Exception("url is null exception");
-            }
-       
+            throw new Exception("url is null exception");
+        }
+
         this.url = url;
         downloadTag = MD5Util.md5(url);
+    }
+
+    public String getFilePath() {
+        return path + fileName;
     }
 
     public String getMd5() {
@@ -119,9 +125,10 @@ public class DownloadInfo {
     public long getProgress() {
         return progress;
     }
+
     public void setProgress(long progress) {
         this.progress = progress;
-        this.progressPersent = (int) ((float)progress / totalLenth *100);
+        this.progressPersent = (int) ((float) progress / totalLenth * 100);
     }
 
     public int getProgressPersent() {
@@ -162,5 +169,13 @@ public class DownloadInfo {
                 ", downloadCall=" + downloadCall +
                 ", taskInfos=" + taskInfos +
                 '}';
+    }
+
+    public String getCachePath() {
+        return TextUtils.isEmpty(cachePath)? getPath():cachePath;
+    }
+
+    public void setCachePath(String cachePath) {
+        this.cachePath = cachePath;
     }
 }

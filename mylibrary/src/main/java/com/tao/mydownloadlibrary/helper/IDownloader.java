@@ -20,7 +20,7 @@ public interface IDownloader {
       
     /**
      * 
-     * 重行下载任务
+     * 重新下载任务
      */
     void reDownload(String url, DownloadCall downloadCall);
     /**
@@ -44,7 +44,6 @@ public interface IDownloader {
     DownloadRecode listDownloadRecode(int index);
     /**
      * 列出下载记录
-
      */
     DownloadRecode listDownloadRecode();
     

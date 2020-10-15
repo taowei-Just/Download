@@ -81,7 +81,7 @@ public class DownloadHelper implements IDownloader {
             bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file1)));
             String line = null;
             while ((line = bufferedReader.readLine()) != null) {
-                Lg.e(line);
+//                Lg.e(line);
                 if (line.contains(tag)) {
                     String[] split = line.split(":");
                     if (split.length < 2) {
@@ -178,7 +178,7 @@ public class DownloadHelper implements IDownloader {
                 }
                 long l = System.currentTimeMillis();
                 DownloadInfo downloadRecode = checkDownloadRecode(url);
-                Lg.e("耗时：" + (System.currentTimeMillis() - l));
+//                Lg.e("耗时：" + (System.currentTimeMillis() - l));
                 if (null == downloadRecode) {
                     try {
                         prepareDownload(prepareDownloadInfo(url, path, fileName, downloadCall));
@@ -264,12 +264,10 @@ public class DownloadHelper implements IDownloader {
 
     private DownloadInfo checkDownloadRecode(String url) {
         String tag = MD5Util.md5(url);
-//        Lg.e("checkDownloadRecode " + tag);
         BufferedReader bufferedReader = null;
         DownloadInfo downloadInfo = null;
-        FileWriter fileWriter;
         File file1 = new File(build.configPath);
-        File file2 = new File(build.configPath + ".cache");
+//        File file2 = new File(build.configPath + ".cache");
         try {
             bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file1)));
             String line = null;
@@ -336,6 +334,7 @@ public class DownloadHelper implements IDownloader {
         downloadInfo.setStatue(DownloadStatue.prepare);
         downloadInfo.setThreadCount(build.taskCount);
         downloadInfo.setPath(path);
+        downloadInfo.setCachePath(build.cachePath);
         downloadInfo.setFileName(fileName);
         downloadInfo.setDownloadCall(downloadCall);
         return downloadInfo;
@@ -437,7 +436,7 @@ public class DownloadHelper implements IDownloader {
             bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file1)));
             String line = null;
             while ((line = bufferedReader.readLine()) != null) {
-                Lg.e(line);
+//                Lg.e(line);
                 String[] split = line.split(":");
                 if (split.length < 2) {
                     continue;
@@ -498,19 +497,21 @@ public class DownloadHelper implements IDownloader {
 
         @Override
         public void onStart(TaskInfo info) {
-            Lg.e("MyDownloadCall onStart ", info.getUrl());
+//            Lg.e("MyDownloadCall onStart ", info.getUrl());
             saveDwnloadInfo2File(downloadInfoMap.get(info.getDownloadTag()));
         }
 
         @Override
         public void onCompleted(TaskInfo info) {
-            Lg.e("MyDownloadCall onCompleted ", info.getUrl());
+//            Lg.ii("MyDownloadCall onCompleted ", info.getUrl());
+            
+            
             callCompleted(info);
         }
 
         @Override
         public void onError(TaskInfo info) {
-            Lg.e("MyDownloadCall onError ", info.getUrl());
+//            Lg.d("MyDownloadCall onError ", info.getUrl());
             callError(info);
         }
     }
@@ -542,19 +543,14 @@ public class DownloadHelper implements IDownloader {
 
     private synchronized void callCompleted(TaskInfo info) {
         DownloadInfo downloadInfo = downloadInfoMap.get(info.getDownloadTag());
-
         List<TaskInfo> taskInfos = taskInfoMap.get(info.getDownloadTag());
         if (downloadInfo == null || taskInfos == null) {
             return;
         }
-
+        downloadInfo.setStatue(DownloadStatue.complete);
         downloadInfo.setProgress(loadTaskProgress(taskInfos));
         saveDwnloadInfo2File(downloadInfo);
-
-        Lg.e("callCompleted", "------------------");
-        Lg.e("callCompleted", downloadInfo);
-        Lg.e("callCompleted", "------------------");
-
+ 
 
         if (downloadInfo.getProgress() >= downloadInfo.getTotalLenth()) {
             downloadInfoMap.remove(info.getDownloadTag());
@@ -594,7 +590,7 @@ public class DownloadHelper implements IDownloader {
         for (TaskInfo taskInfo : taskInfos) {
             RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
             accessFile.setLength(downloadInfo.getTotalLenth());
-            Lg.e(taskInfo);
+//            Lg.e(taskInfo);
             long offeset = taskInfo.getOffeset();
             long threadLen = taskInfo.getThreadLen();
             accessFile.seek(offeset);
@@ -635,7 +631,7 @@ public class DownloadHelper implements IDownloader {
         downloadInfo.setProgress(loadTaskProgress(downloadInfo.getTaskInfos()));
 
 
-        Lg.e("MyDownloadCall onProgress ", downloadInfo);
+//        Lg.e("MyDownloadCall onProgress ", downloadInfo);
 
         if (null == downloadInfo.getDownloadCall())
             return;
@@ -663,13 +659,11 @@ public class DownloadHelper implements IDownloader {
                 return;
             }
             saveDwnloadInfo2File(downloadInfo);
-//            Lg.e("MyPerpare onComplete", downloadInfo);
             excuteDownloadTask(downloadInfo);
         }
 
         @Override
         public void onError(DownloadInfo downloadInfo) {
-//            Lg.e("MyPerpare onError", downloadInfo);
             downloadInfo.setStatue(DownloadStatue.error);
             saveDwnloadInfo2File(downloadInfo);
 
@@ -693,8 +687,8 @@ public class DownloadHelper implements IDownloader {
                 file.getParentFile().mkdirs();
                 file.createNewFile();
             }
-            String str = downloadInfo.getDownloadTag() + ":" + new File(downloadInfo.getPath() + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
-            Lg.e(str);
+            String str = downloadInfo.getDownloadTag() + ":" + new File(build.context.getExternalCacheDir() +File.separator +"download"+ File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
+//            Lg.e(str);
             WriteStreamAppend.method1(file.getAbsolutePath(), str + "\n");
 //            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file ,true)));
 //           
@@ -709,10 +703,10 @@ public class DownloadHelper implements IDownloader {
         if (downloadInfo == null)
             return;
         String s = MyGosn.toJson(downloadInfo, "DownloadCall");
-        Lg.e(s);
+//        Lg.e(s);
         FileOutputStream outputStream = null;
         try {
-            File file = new File(downloadInfo.getPath() + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info");
+            File file = new File(build.context.getExternalCacheDir() +File.separator +"download"+File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info");
             if (!file.exists()) {
                 file.getParentFile().mkdirs();
                 file.createNewFile();
@@ -734,6 +728,7 @@ public class DownloadHelper implements IDownloader {
     }
 
     public static class Build {
+        public String cachePath;
         Context context;
         // 文件默认下载路径
         String rootPath;
@@ -745,8 +740,9 @@ public class DownloadHelper implements IDownloader {
 
         public Build(Context context) {
             this.context = context.getApplicationContext();
-            rootPath = context.getExternalCacheDir().getAbsolutePath();
-            configPath = context.getFilesDir() + File.separator + "download.config";
+            cachePath = context.getExternalCacheDir() + File.separator +"download"+File.separator +"caches"+File.separator;
+            rootPath = context.getExternalFilesDir(null).getAbsolutePath()+ File.separator +"download"+File.separator;
+            configPath = context.getFilesDir() + File.separator +"download"+File.separator+ "download.config";
         }
 
         public Build setContext(Context context) {

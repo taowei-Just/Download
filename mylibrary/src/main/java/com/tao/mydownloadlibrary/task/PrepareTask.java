@@ -47,10 +47,10 @@ public class PrepareTask implements Runnable {
                     info.setFileLen(length);
                     info.setProgressLen(0);
                     info.setThreadLen(j == downloadInfo.getThreadCount() - 1 ? length / downloadInfo.getThreadCount() + length % downloadInfo.getThreadCount() : length / downloadInfo.getThreadCount());
-                    info.setCacheFile(downloadInfo.getPath() + File.separator + downloadInfo.getDownloadTag() + File.separator + downloadInfo.getFileName() + "(" + j + ").cache");
+                    info.setCacheFile(downloadInfo.getCachePath() + File.separator + downloadInfo.getDownloadTag() + File.separator + downloadInfo.getFileName() + "(" + j + ").cache");
                     info.setOffeset(j * (length / downloadInfo.getThreadCount()));
                     taskInfoS.add(info);
-                    Lg.e(tag, info.toString());
+//                    Lg.e(tag, info.toString());
                 }
                 downloadInfo.setTaskInfos(taskInfoS);
                 Thread.sleep(1);

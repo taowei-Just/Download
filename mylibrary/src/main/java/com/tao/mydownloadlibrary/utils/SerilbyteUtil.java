@@ -141,7 +141,7 @@ public class SerilbyteUtil {
             }
 
             System.out.print(hex.toUpperCase());
-            Lg.e("printHexString  ", hex.toUpperCase());
+//            Lg.e("printHexString  ", hex.toUpperCase());
         }
 
     }
