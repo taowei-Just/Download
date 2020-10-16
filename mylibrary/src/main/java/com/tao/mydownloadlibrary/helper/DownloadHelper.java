@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -48,7 +49,7 @@ public class DownloadHelper implements IDownloader {
     private int defaultCount = 2048;
     private long lastProgressTime;
     private Build build;
-    private String tag =getClass().getSimpleName();
+    private String tag = getClass().getSimpleName();
 
     private DownloadHelper() {
         loadInfoPool = Executors.newFixedThreadPool(10);
@@ -250,8 +251,8 @@ public class DownloadHelper implements IDownloader {
                     // 有下载记录
                     //2.查找之前下载的文件还在不在
                     //3.尝试恢复下载
-                    if (recodeVaild(downloadRecode)) {
-                        recoverRecode(downloadRecode);
+                    if (recodeVaild(downloadRecode) && build.reuseFile) {
+                        recoverRecode(downloadRecode, path, fileName);
                     } else {
                         try {
                             prepareDownload(prepareDownloadInfo(url, path, fileName, downloadCall));
@@ -265,12 +266,36 @@ public class DownloadHelper implements IDownloader {
 
     }
 
-    private void recoverRecode(DownloadInfo downloadRecode) {
+    private void recoverRecode(DownloadInfo downloadRecode, String path, String fileName) {
+
+    
         try {
+            if (null != downloadRecode.getDownloadCall()) {
+                downloadRecode.getDownloadCall().onPrepare(downloadRecode);
+            }
+            
             File inputFile = new File(downloadRecode.getPath(), downloadRecode.getFileName());
             if (inputFile.exists()) {
+                if (!path.endsWith(File.separator)) {
+                    path = path + File.separator;
+                }
+                
                 String md5fromBigFile = MD5Util.getMD5fromBigFile(inputFile);
                 if (md5fromBigFile.equals(downloadRecode.getMd5())) {
+                    if (TextUtils.isEmpty(path)){
+                        path = downloadRecode.getPath();
+                    }
+                    if (TextUtils.isEmpty(fileName)){
+                        fileName =downloadRecode.getFileName();
+                    }
+                    
+                    if (!downloadRecode.getFilePath().equals(path + fileName)) {
+                        // 复制文件到指定下载路径
+                        if (copyFile(downloadRecode.getFilePath(), path + fileName)) {
+                            downloadRecode.setPath(path);
+                            downloadRecode.setFileName(fileName);
+                        }
+                    }
                     if (downloadRecode.getDownloadCall() != null)
                         downloadRecode.getDownloadCall().onCompleted(downloadRecode);
                     return;
@@ -278,11 +303,64 @@ public class DownloadHelper implements IDownloader {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            if (downloadRecode.getDownloadCall() != null)
+                downloadRecode.getDownloadCall().onError(downloadRecode);
+        }finally {
+            saveDwnloadInfo2File(downloadRecode);
         }
 
 //        Lg.e(" recoverRecode", downloadRecode);
-        saveDwnloadInfo2File(downloadRecode);
         excuteDownloadTask(downloadRecode);
+    }
+
+    private boolean copyFile(String filePath, String newFile) {
+        File file = new File(filePath);
+        File newF = new File(newFile);
+        if (!file.exists())
+            return false;
+        if (!newF.exists()) {
+           newF.getParentFile().mkdirs();
+            try {
+                newF.createNewFile();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        FileInputStream fileInputStream = null;
+        FileOutputStream newFileOutput = null;
+        try {
+            fileInputStream = new FileInputStream(file);
+            newFileOutput = new FileOutputStream(newFile);
+
+            // 缓存2M
+            byte[] buff = new byte[2 * 1024 * 1024];
+            int len = 0;
+            while ((len = fileInputStream.read(buff)) > -1) {
+                newFileOutput.write(buff, 0, len);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (fileInputStream != null) {
+                try {
+                    fileInputStream.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            if (newFileOutput != null) {
+                try {
+                    newFileOutput.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+
     }
 
     private boolean recodeVaild(DownloadInfo downloadRecode) {
@@ -807,6 +885,8 @@ public class DownloadHelper implements IDownloader {
         // 默认每个下载线程数
         int taskCount = 1;
         String configPath;
+        // 当发现连接对应的文件已存在的时候是否复用原先已经下载的文件
+        boolean reuseFile = true;
 
         public Build(Context context) {
             this.context = context.getApplicationContext();

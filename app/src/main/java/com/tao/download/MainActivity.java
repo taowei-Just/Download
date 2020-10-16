@@ -2,6 +2,7 @@ package com.tao.download;
 
 import android.Manifest;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Messenger;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -89,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onProgress(DownloadInfo downloadInfo) {
 
-                Log.e(tag, "onProgress " + downloadInfo.getFilePath() + "   " + downloadInfo.getProgressPersent() + "%"   + " " +Thread.currentThread().getName());
+                Log.e(tag, "onProgress " + downloadInfo.getFilePath() + "   " + downloadInfo.getProgressPersent() + "%" + " " + Thread.currentThread().getName());
             }
 
             @Override
@@ -123,8 +124,8 @@ public class MainActivity extends AppCompatActivity {
         };
         for (int i = 0; i < mFileList.size(); i++) {
             String String = mFileList.get(i);
-            DownloadHelper.getInstance().addDownload(String, downloadCall);
-
+            DownloadHelper.getInstance().addDownload(String, Environment.getExternalStorageDirectory().getAbsolutePath(), downloadCall);
+         
             //            if (i==3)
             //                return;
 
