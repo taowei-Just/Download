@@ -6,6 +6,7 @@ import com.tao.mydownloadlibrary.utils.HttpUtil;
 import com.tao.mydownloadlibrary.utils.Lg;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 
@@ -27,11 +28,12 @@ public class DownloadTask implements Runnable {
     public void run() {
         try {
 //            Lg.e(tag, "DownloadTask  run  " + info.getCacheFile());
-            if (info.getOffeset() == info.getFileLen()) {
+            if (info.getOffeset() == info.getFileLen() && info.getThreadLen()>0) {
                 downloadCall.onCompleted(info);
                 return;
             }
             Request.Builder builder = new Request.Builder();
+            if (info.getCurrentLen()>0)
             builder.addHeader("RANGE", "bytes=" + (info.getOffeset() + info.getProgressLen()) + "-" + (info.getOffeset() + info.getThreadLen()));
             builder.url(info.getUrl());
             Response execute = HttpUtil.callGetBuilder(builder);
@@ -45,21 +47,21 @@ public class DownloadTask implements Runnable {
             } else {
                 file.delete();
             }
-            RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
+            FileOutputStream accessFile = new FileOutputStream(file );
 //            accessFile.setLength(info.getFileLen());
 //            accessFile.seek(info.getOffeset() + info.getProgressLen());    
-            accessFile.setLength(info.getThreadLen());
-            accessFile.seek(0);
+//            accessFile.setLength(info.getThreadLen());
+//            accessFile.seek(0);
             downloadCall.onStart(info);
-            byte[] buff = new byte[1024 * 10];
+            byte[] buff = new byte[1024 * 100];
             int len;
             long time = System.currentTimeMillis();
             int cacheLen = 0;
             while ((len = inputStream.read(buff)) != -1) {
-                if (info.getProgressLen() + len > info.getThreadLen()) {
+                if (info.getProgressLen() + len > info.getThreadLen() &&  info.getThreadLen()>0) {
                     len = (int) (info.getThreadLen() - info.getProgressLen());
                 }
-                if (len <= 0)
+                if (len <= 0 )
                     continue;
                 accessFile.write(buff, 0, len);
                 cacheLen += len;

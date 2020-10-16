@@ -699,11 +699,12 @@ public class DownloadHelper implements IDownloader {
         downloadInfo.setProgress(loadTaskProgress(taskInfos));
         saveDwnloadInfo2File(downloadInfo);
 
-
+        downloadInfoMap.remove(info.getDownloadTag());
+        taskInfoMap.remove(info.getDownloadTag());
+        futureMap.remove(info.getDownloadTag());
+        
         if (downloadInfo.getProgress() >= downloadInfo.getTotalLenth()) {
-            downloadInfoMap.remove(info.getDownloadTag());
-            taskInfoMap.remove(info.getDownloadTag());
-            futureMap.remove(info.getDownloadTag());
+ 
             try {
                 mergeFiles(downloadInfo, taskInfos);
                 saveDwnloadInfo2File(downloadInfo);
@@ -713,9 +714,20 @@ public class DownloadHelper implements IDownloader {
                     downloadInfo.getDownloadCall().onError(downloadInfo);
                 return;
             }
-
+          
             if (null != downloadInfo.getDownloadCall())
                 downloadInfo.getDownloadCall().onCompleted(downloadInfo);
+        }else if (downloadInfo.getTotalLenth()==Integer.MAX_VALUE && downloadInfo.getProgress()>0){
+           
+            
+            if (null != downloadInfo.getDownloadCall())
+                downloadInfo.getDownloadCall().onCompleted(downloadInfo);
+            
+            
+        }else {
+           
+            if (null != downloadInfo.getDownloadCall())
+                downloadInfo.getDownloadCall().onError(downloadInfo);
         }
     }
 
@@ -803,8 +815,19 @@ public class DownloadHelper implements IDownloader {
         @Override
         public void onComplete(DownloadInfo downloadInfo, List<TaskInfo> taskInfoS) {
             if (downloadInfo.getTotalLenth() <= 0) {
-                onError(downloadInfo);
-                return;
+//                onError(downloadInfo);
+                downloadInfo.setThreadCount(1);
+                downloadInfo.setTotalLenth(Integer.MAX_VALUE);
+                
+                List<TaskInfo> taskInfos = downloadInfo.getTaskInfos();
+                TaskInfo taskInfo = taskInfos.get(0);
+                taskInfo.setThreadCount(1);
+                taskInfo.setFileLen(-2);
+                taskInfo.setThreadLen(-2);
+                taskInfo.setOffeset(0);
+                
+                taskInfoS.clear();
+                taskInfoS.add(taskInfo);
             }
             saveDwnloadInfo2File(downloadInfo);
             excuteDownloadTask(downloadInfo);
