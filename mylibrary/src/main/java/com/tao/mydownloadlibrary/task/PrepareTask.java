@@ -30,7 +30,6 @@ public class PrepareTask implements Runnable {
     public void run() {
         try {
             Response response = HttpUtil.callGet(downloadInfo.getUrl());
-           
 
             if (response.code() != 200) {
                 prepareTaskCall.onError(downloadInfo);
@@ -38,7 +37,7 @@ public class PrepareTask implements Runnable {
                 long length = response.body().contentLength();
                 downloadInfo.setTotalLenth(length);
                 Headers headers = response.headers();
-                Lg.e(tag, " headers " + headers);
+//                Lg.e(tag, " headers " + headers);
                 readFileName(headers);
                 usedRanges(headers);
                 List<TaskInfo> taskInfoS = new ArrayList<>();

@@ -39,7 +39,7 @@ public class TaskInfo {
     long currentLen;
     @Expose
 
-    DownloadStatue statue;   // 状态 0 未启动 ， 1.准备中 ，2.下载中 ，3 异常 ，4 完成 
+    DownloadStatue statue =DownloadStatue.prepare;   // 状态 0 未启动 ， 1.准备中 ，2.下载中 ，3 异常 ，4 完成 
 
     public TaskInfo(String downloadId, int taskId, String url, String fileName) {
         this.downloadTag = downloadId;
@@ -49,6 +49,14 @@ public class TaskInfo {
         this.cacheFile = fileName + ".cache";
     }
 
+
+    public DownloadStatue getStatue() {
+        return statue;
+    }
+
+    public void setStatue(DownloadStatue statue) {
+        this.statue = statue;
+    }
 
     public int getTaskId() {
         return taskId;

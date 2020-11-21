@@ -77,8 +77,28 @@ public class DownloadHelper implements IDownloader {
             downloadPool.shutdownNow();
 
         int nThreads = build.missionCount * build.taskCount;
-//        Log.e(tag , "downloadPool size  " +nThreads);
+
         downloadPool = Executors.newFixedThreadPool(nThreads);
+
+        File file = new File(build.configPath);
+        if (!file.exists()) {
+            file.getParentFile().mkdirs();
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        file = new File(build.rootPath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+
+        file = new File(build.cachePath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+
     }
 
     public void init(Context context) {
@@ -268,27 +288,27 @@ public class DownloadHelper implements IDownloader {
 
     private void recoverRecode(DownloadInfo downloadRecode, String path, String fileName) {
 
-    
+
         try {
             if (null != downloadRecode.getDownloadCall()) {
                 downloadRecode.getDownloadCall().onPrepare(downloadRecode);
             }
-            
+
             File inputFile = new File(downloadRecode.getPath(), downloadRecode.getFileName());
             if (inputFile.exists()) {
                 if (!path.endsWith(File.separator)) {
                     path = path + File.separator;
                 }
-                
+
                 String md5fromBigFile = MD5Util.getMD5fromBigFile(inputFile);
                 if (md5fromBigFile.equals(downloadRecode.getMd5())) {
-                    if (TextUtils.isEmpty(path)){
+                    if (TextUtils.isEmpty(path)) {
                         path = downloadRecode.getPath();
                     }
-                    if (TextUtils.isEmpty(fileName)){
-                        fileName =downloadRecode.getFileName();
+                    if (TextUtils.isEmpty(fileName)) {
+                        fileName = downloadRecode.getFileName();
                     }
-                    
+
                     if (!downloadRecode.getFilePath().equals(path + fileName)) {
                         // 复制文件到指定下载路径
                         if (copyFile(downloadRecode.getFilePath(), path + fileName)) {
@@ -305,7 +325,7 @@ public class DownloadHelper implements IDownloader {
             e.printStackTrace();
             if (downloadRecode.getDownloadCall() != null)
                 downloadRecode.getDownloadCall().onError(downloadRecode);
-        }finally {
+        } finally {
             saveDwnloadInfo2File(downloadRecode);
         }
 
@@ -319,7 +339,7 @@ public class DownloadHelper implements IDownloader {
         if (!file.exists())
             return false;
         if (!newF.exists()) {
-           newF.getParentFile().mkdirs();
+            newF.getParentFile().mkdirs();
             try {
                 newF.createNewFile();
             } catch (Exception e) {
@@ -394,7 +414,8 @@ public class DownloadHelper implements IDownloader {
             File file = new File(taskInfo.getCacheFile());
             if (!file.exists())
                 return false;
-            if (file.length() != taskInfo.getThreadLen())
+            long length = file.length();
+            if (length != taskInfo.getThreadLen())
                 return false;
         }
         return true;
@@ -653,7 +674,6 @@ public class DownloadHelper implements IDownloader {
         public void onCompleted(TaskInfo info) {
 //            Lg.ii("MyDownloadCall onCompleted ", info.getUrl());
 
-
             callCompleted(info);
         }
 
@@ -702,10 +722,19 @@ public class DownloadHelper implements IDownloader {
         downloadInfoMap.remove(info.getDownloadTag());
         taskInfoMap.remove(info.getDownloadTag());
         futureMap.remove(info.getDownloadTag());
-        
-        if (downloadInfo.getProgress() >= downloadInfo.getTotalLenth()) {
- 
+
+        if (downloadInfo.getProgress() >= downloadInfo.getTotalLenth() || (downloadInfo.getTotalLenth() == -1 && completeTask(downloadInfo))) {
+
             try {
+                if (downloadInfo.getTotalLenth() == -1) {
+                    for (TaskInfo taskInfo : downloadInfo.getTaskInfos()) {
+                        if (taskInfo == null)
+                            continue;
+                        downloadInfo.setTotalLenth(downloadInfo.getTotalLenth()+taskInfo.getProgressLen());
+
+                    }
+                    downloadInfo.setTotalLenth(downloadInfo.getTotalLenth()+1);
+                }
                 mergeFiles(downloadInfo, taskInfos);
                 saveDwnloadInfo2File(downloadInfo);
             } catch (Exception e) {
@@ -714,21 +743,29 @@ public class DownloadHelper implements IDownloader {
                     downloadInfo.getDownloadCall().onError(downloadInfo);
                 return;
             }
-          
+
             if (null != downloadInfo.getDownloadCall())
                 downloadInfo.getDownloadCall().onCompleted(downloadInfo);
-        }else if (downloadInfo.getTotalLenth()==Integer.MAX_VALUE && downloadInfo.getProgress()>0){
-           
-            
+        } else if (downloadInfo.getTotalLenth() == Integer.MAX_VALUE && downloadInfo.getProgress() > 0) {
+
+
             if (null != downloadInfo.getDownloadCall())
                 downloadInfo.getDownloadCall().onCompleted(downloadInfo);
-            
-            
-        }else {
-           
+
+        } else {
+
             if (null != downloadInfo.getDownloadCall())
                 downloadInfo.getDownloadCall().onError(downloadInfo);
         }
+    }
+
+    private boolean completeTask(DownloadInfo downloadInfo) {
+        for (TaskInfo taskInfo : downloadInfo.getTaskInfos()) {
+            if (taskInfo != null && taskInfo.getStatue() != DownloadStatue.complete) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void mergeFiles(DownloadInfo downloadInfo, List<TaskInfo> taskInfos) throws Exception {
@@ -758,6 +795,7 @@ public class DownloadHelper implements IDownloader {
             FileInputStream inputStream = new FileInputStream(cacheFile);
 
             byte[] buff = new byte[1024 * 1024 * 3];
+
             int len = 0;
             while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
                 accessFile.write(buff, 0, len);
@@ -803,7 +841,7 @@ public class DownloadHelper implements IDownloader {
 
     }
 
-    private long loadTaskProgress(List<TaskInfo> taskInfos) {
+    private synchronized long loadTaskProgress(List<TaskInfo> taskInfos) {
         long progress = 0;
         for (TaskInfo taskInfo : taskInfos) {
             progress += taskInfo.getProgressLen();
@@ -817,15 +855,15 @@ public class DownloadHelper implements IDownloader {
             if (downloadInfo.getTotalLenth() <= 0) {
 //                onError(downloadInfo);
                 downloadInfo.setThreadCount(1);
-                downloadInfo.setTotalLenth(Integer.MAX_VALUE);
-                
+//                downloadInfo.setTotalLenth(Integer.MAX_VALUE);
+
                 List<TaskInfo> taskInfos = downloadInfo.getTaskInfos();
                 TaskInfo taskInfo = taskInfos.get(0);
                 taskInfo.setThreadCount(1);
                 taskInfo.setFileLen(-2);
                 taskInfo.setThreadLen(-2);
                 taskInfo.setOffeset(0);
-                
+
                 taskInfoS.clear();
                 taskInfoS.add(taskInfo);
             }
@@ -904,7 +942,7 @@ public class DownloadHelper implements IDownloader {
         // 文件默认下载路径
         String rootPath;
         // 同时最多下载任务数s
-        int missionCount = 2;
+        int missionCount = 3;
         // 默认每个下载线程数
         int taskCount = 1;
         String configPath;

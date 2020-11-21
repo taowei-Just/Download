@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0001);
         DownloadHelper.getInstance().init(DownloadHelper.getInstance()
                 .createDefaultBuild(this)
-                .setTaskCount(5)
+                .setTaskCount(2)
                 .setMissionCount(3)
         );
 
@@ -153,5 +153,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         DownloadHelper.getInstance().addDownload(url, Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator, downloadCall);
+    }
+
+    public void pause(View view) {
+        String url = ((EditText) findViewById(R.id.et_url)).getText().toString();
+        if (TextUtils.isEmpty(url)) {
+            Toast.makeText(this, "请输入下载地址", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        DownloadHelper.getInstance().stopDownload(url);
     }
 }

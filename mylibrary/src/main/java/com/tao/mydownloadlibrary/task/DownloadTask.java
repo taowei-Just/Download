@@ -1,5 +1,6 @@
 package com.tao.mydownloadlibrary.task;
 
+import com.tao.mydownloadlibrary.DownloadStatue;
 import com.tao.mydownloadlibrary.callback.DownloadTaskCAll;
 import com.tao.mydownloadlibrary.info.TaskInfo;
 import com.tao.mydownloadlibrary.utils.HttpUtil;
@@ -7,6 +8,7 @@ import com.tao.mydownloadlibrary.utils.Lg;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 
@@ -26,15 +28,19 @@ public class DownloadTask implements Runnable {
 
     @Override
     public void run() {
+        FileOutputStream ops = null;
+        RandomAccessFile accessFile = null;
         try {
 //            Lg.e(tag, "DownloadTask  run  " + info.getCacheFile());
-            if (info.getOffeset() == info.getFileLen() && info.getThreadLen()>0) {
+            if (info.getOffeset() == info.getFileLen() && info.getThreadLen() > 0) {
                 downloadCall.onCompleted(info);
                 return;
             }
+            info.setStatue(DownloadStatue.downloading);
+
             Request.Builder builder = new Request.Builder();
-            if (info.getCurrentLen()>0)
-            builder.addHeader("RANGE", "bytes=" + (info.getOffeset() + info.getProgressLen()) + "-" + (info.getOffeset() + info.getThreadLen()));
+            if (info.getCurrentLen() > 0)
+                builder.addHeader("RANGE", "bytes=" + (info.getOffeset() + info.getProgressLen()) + "-" + (info.getOffeset() + info.getThreadLen()));
             builder.url(info.getUrl());
             Response execute = HttpUtil.callGetBuilder(builder);
             long length = execute.body().contentLength();
@@ -44,26 +50,35 @@ public class DownloadTask implements Runnable {
             File file = new File(info.getCacheFile());
             if (!file.exists()) {
                 file.getParentFile().mkdirs();
-            } else {
-                file.delete();
             }
-            FileOutputStream accessFile = new FileOutputStream(file );
-//            accessFile.setLength(info.getFileLen());
-//            accessFile.seek(info.getOffeset() + info.getProgressLen());    
-//            accessFile.setLength(info.getThreadLen());
-//            accessFile.seek(0);
+            if (!isAccess()) {
+                if (file.exists())  {
+                    file.delete();
+                }
+                ops = new FileOutputStream(file);
+            } else {
+                accessFile = new RandomAccessFile(file, "rwd");
+                accessFile.setLength(info.getThreadLen());
+                accessFile.seek(info.getOffeset() + info.getProgressLen());
+//                accessFile.setLength(info.getThreadLen());
+////                accessFile.seek(0);
+            }
             downloadCall.onStart(info);
-            byte[] buff = new byte[1024 * 100];
+            byte[] buff = new byte[1024 * 1024];
             int len;
             long time = System.currentTimeMillis();
             int cacheLen = 0;
             while ((len = inputStream.read(buff)) != -1) {
-                if (info.getProgressLen() + len > info.getThreadLen() &&  info.getThreadLen()>0) {
+                if (info.getProgressLen() + len > info.getThreadLen() && info.getThreadLen() > 0) {
                     len = (int) (info.getThreadLen() - info.getProgressLen());
                 }
-                if (len <= 0 )
+                if (len <= 0)
                     continue;
-                accessFile.write(buff, 0, len);
+                if (!isAccess()) {
+                    ops.write(buff, 0, len);
+                } else {
+                    accessFile.write(buff, 0, len);
+                }
                 cacheLen += len;
                 if (System.currentTimeMillis() - time >= 1000) {
                     writeProgress(cacheLen);
@@ -75,13 +90,34 @@ public class DownloadTask implements Runnable {
             if (cacheLen > 0) {
                 writeProgress(cacheLen);
             }
+            info.setStatue(DownloadStatue.complete);
             downloadCall.onCompleted(info);
             execute.body().close();
         } catch (Exception e) {
             e.printStackTrace();
-//            Lg.e(tag, info);
+            info.setStatue(DownloadStatue.error);
             downloadCall.onError(info);
+        } finally {
+            try {
+                if (accessFile != null)
+                    accessFile.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                if (ops != null) {
+                    ops.close();
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+    }
+
+    private boolean isAccess() {
+        return info.getThreadLen()>0;
     }
 
     private void writeProgress(int len) {
