@@ -52,7 +52,7 @@ public class DownloadTask implements Runnable {
             if (!file.exists()) {
                 file.getParentFile().mkdirs();
             }
-            if (isAccess()) {
+            if (!isAccess()) {
                 if (file.exists()) {
                     file.delete();
                 }
@@ -75,7 +75,7 @@ public class DownloadTask implements Runnable {
                 }
                 if (len <= 0)
                     continue;
-                if (isAccess()) {
+                if (!isAccess()) {
                     ops.write(buff, 0, len);
                 } else {
                     accessFile.write(buff, 0, len);
@@ -86,7 +86,7 @@ public class DownloadTask implements Runnable {
                     time = System.currentTimeMillis();
                     cacheLen = 0;
                 }
-                if (info.getProgressLen() >= info.getThreadLen())
+                if (isAccess() && info.getProgressLen() >= info.getThreadLen())
                     break;
                 Thread.sleep(1);
             }

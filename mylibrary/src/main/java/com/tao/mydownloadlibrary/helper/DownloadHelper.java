@@ -11,6 +11,7 @@ import com.tao.mydownloadlibrary.info.DownloadRecode;
 import com.tao.mydownloadlibrary.info.TaskInfo;
 import com.tao.mydownloadlibrary.task.DownloadTask;
 import com.tao.mydownloadlibrary.task.PrepareTask;
+import com.tao.mydownloadlibrary.utils.Lg;
 import com.tao.mydownloadlibrary.utils.MD5Util;
 import com.tao.mydownloadlibrary.utils.MyGosn;
 import com.tao.mydownloadlibrary.utils.TextUtils;
@@ -25,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -790,6 +793,13 @@ public class DownloadHelper implements IDownloader {
         return true;
     }
 
+    /**
+     * 
+     * 有一个问题  当文件长度未获取到时则 不能使用 RandomAccessFile 
+     * @param downloadInfo
+     * @param taskInfos
+     * @throws Exception
+     */
     private void mergeFiles(DownloadInfo downloadInfo, List<TaskInfo> taskInfos) throws Exception {
         File file = new File(downloadInfo.getPath() + File.separator + downloadInfo.getFileName());
         if (!file.exists()) {
@@ -805,11 +815,21 @@ public class DownloadHelper implements IDownloader {
         } else {
             file.delete();
         }
+
+        Collections.sort(taskInfos, new Comparator<TaskInfo>() {
+            @Override
+            public int compare(TaskInfo taskInfo, TaskInfo t1) {
+                return taskInfo.getTaskId() -t1.getTaskId();
+            }
+        });
+
+        Lg.e( taskInfos.toString());
+ 
+        
         RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
         accessFile.setLength(downloadInfo.getTotalLenth());
+        
         for (TaskInfo taskInfo : taskInfos) {
-
-//            Lg.e(taskInfo);
             long offeset = taskInfo.getOffeset();
             long threadLen = taskInfo.getThreadLen();
             accessFile.seek(offeset);
