@@ -37,10 +37,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initEvent();
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0001);
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0001);
+        
+        
         DownloadHelper.getInstance().init(DownloadHelper.getInstance()
                 .createDefaultBuild(this)
-                .setTaskCount(2)
+                .setTaskCount(5)
                 .setMissionCount(3)
         );
 
@@ -63,18 +66,18 @@ public class MainActivity extends AppCompatActivity {
 //        String4 = "http://wap.apk.anzhi.com/data5/apk/202004/10/0cb1a83a628ee0df19172f542c9d2fee_42653900.apk";
 //        mFileList.add(String4);
 //
-//        String4 = "http://yapkwww.cdn.anzhi.com/data1/apk/201804/24/com.google.android.inputmethod.pinyin_22939500.apk";
-//        mFileList.add(String4);
-//        String4 = "http://yapkwww.cdn.anzhi.com/data3/apk/201710/23/com.huawei.hidisk_70602700.apk";
-//        mFileList.add(String4);
-//        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/11/94385bee070f4aed0405cefabdc33ecb_97451200.apk";
-//        mFileList.add(String4);
-//        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/08/032eaece8750c4e297bcb6c047ec1324_83453500.apk";
-//        mFileList.add(String4);
-//        String4 = "http://wap.apk.anzhi.com/data5/apk/202005/14/5bc8969e2fdecf06e98960d33da58a29_87828300.apk";
-//        mFileList.add(String4);
-//        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/01/692acdc9a9779f872b98d6eb148f59e2_92027500.apk";
-//        mFileList.add(String4);
+        String4 = "http://yapkwww.cdn.anzhi.com/data1/apk/201804/24/com.google.android.inputmethod.pinyin_22939500.apk";
+        mFileList.add(String4);
+        String4 = "http://yapkwww.cdn.anzhi.com/data3/apk/201710/23/com.huawei.hidisk_70602700.apk";
+        mFileList.add(String4);
+        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/11/94385bee070f4aed0405cefabdc33ecb_97451200.apk";
+        mFileList.add(String4);
+        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/08/032eaece8750c4e297bcb6c047ec1324_83453500.apk";
+        mFileList.add(String4);
+        String4 = "http://wap.apk.anzhi.com/data5/apk/202005/14/5bc8969e2fdecf06e98960d33da58a29_87828300.apk";
+        mFileList.add(String4);
+        String4 = "http://wap.apk.anzhi.com/data5/apk/202006/01/692acdc9a9779f872b98d6eb148f59e2_92027500.apk";
+        mFileList.add(String4);
 // 
         String4 = "https://github-production-release-asset-2e65be.s3.amazonaws.com/49609581/ca62c880-01d7-11eb-8aa1-db7b5bdb9099?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20201016%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20201016T073156Z&X-Amz-Expires=300&X-Amz-Signature=86322a3abd60e1ba79f0f663ea1906cb7cf9a2e3a2166266474ade9d7d501751&X-Amz-SignedHeaders=host&actor_id=33301137&key_id=0&repo_id=49609581&response-content-disposition=attachment%3B%20filename%3DPowerShell-7.1.0-rc.1-win-x64.msi&response-content-type=application%2Foctet-stream";
         mFileList.add(String4);
@@ -98,8 +101,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onCompleted(DownloadInfo downloadInfo) {
-                Log.e(tag, "onCompleted " + downloadInfo.getFilePath());
-
+                Log.e(tag, "onCompleted " + downloadInfo.toString());
+//                for (TaskInfo taskInfo : downloadInfo.getTaskInfos()) {
+//                    Lg.e(taskInfo.toString());
+//                }
             }
 
             @Override
@@ -131,7 +136,11 @@ public class MainActivity extends AppCompatActivity {
        
         for (int i = 0; i < mFileList.size(); i++) {
             String String = mFileList.get(i);
-            DownloadHelper.getInstance().addDownload(String, Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator, downloadCall);
+            try {
+                DownloadHelper.getInstance().addDownload(String, Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator, downloadCall);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             //            if (i==3)
             //                return;
@@ -152,7 +161,13 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "请输入下载地址", Toast.LENGTH_SHORT).show();
             return;
         }
-        DownloadHelper.getInstance().addDownload(url, Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator, downloadCall);
+        
+//        new File("/storage/emulated/0/fe31a83fa694652d2220911487dd6a22_16286800.apk").delete();
+        try {
+            DownloadHelper.getInstance().addDownload(url, Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator, downloadCall);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void pause(View view) {

@@ -25,6 +25,7 @@ public class Lg {
     }
 
     public static void e(String tag, String s) {
-        Log.e(tag, s);
+//        Log.e(tag, s);
+        System.err.println(tag+s);
     }
 }

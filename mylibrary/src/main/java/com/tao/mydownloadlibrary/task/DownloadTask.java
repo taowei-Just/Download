@@ -39,20 +39,21 @@ public class DownloadTask implements Runnable {
             info.setStatue(DownloadStatue.downloading);
 
             Request.Builder builder = new Request.Builder();
-            if (info.getCurrentLen() > 0)
-                builder.addHeader("RANGE", "bytes=" + (info.getOffeset() + info.getProgressLen()) + "-" + (info.getOffeset() + info.getThreadLen()));
+            if (info.getThreadLen() > 0)
+                builder.addHeader("RANGE", "bytes=" + (info.getOffeset() + info.getProgressLen()) + "-" + (info.getEndBound()));
             builder.url(info.getUrl());
             Response execute = HttpUtil.callGetBuilder(builder);
             long length = execute.body().contentLength();
-//            Lg.e(tag, "length  " + length + " thread " + Thread.currentThread());
 
+            Lg.e(tag, "length  " + length + " " + info.getThreadLen() + "   " + Thread.currentThread());
+            Lg.e(info.toString());
             InputStream inputStream = execute.body().byteStream();
             File file = new File(info.getCacheFile());
             if (!file.exists()) {
                 file.getParentFile().mkdirs();
             }
-            if (!isAccess()) {
-                if (file.exists())  {
+            if (isAccess()) {
+                if (file.exists()) {
                     file.delete();
                 }
                 ops = new FileOutputStream(file);
@@ -74,7 +75,7 @@ public class DownloadTask implements Runnable {
                 }
                 if (len <= 0)
                     continue;
-                if (!isAccess()) {
+                if (isAccess()) {
                     ops.write(buff, 0, len);
                 } else {
                     accessFile.write(buff, 0, len);
@@ -85,6 +86,8 @@ public class DownloadTask implements Runnable {
                     time = System.currentTimeMillis();
                     cacheLen = 0;
                 }
+                if (info.getProgressLen() >= info.getThreadLen())
+                    break;
                 Thread.sleep(1);
             }
             if (cacheLen > 0) {
@@ -117,7 +120,7 @@ public class DownloadTask implements Runnable {
     }
 
     private boolean isAccess() {
-        return info.getThreadLen()>0;
+        return info.getThreadLen() > 0;
     }
 
     private void writeProgress(int len) {

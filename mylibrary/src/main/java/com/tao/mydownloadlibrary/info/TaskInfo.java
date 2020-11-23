@@ -38,8 +38,10 @@ public class TaskInfo {
     @Expose
     long currentLen;
     @Expose
+    long endBound;
+    @Expose
 
-    DownloadStatue statue =DownloadStatue.prepare;   // 状态 0 未启动 ， 1.准备中 ，2.下载中 ，3 异常 ，4 完成 
+    DownloadStatue statue = DownloadStatue.prepare;   // 状态 0 未启动 ， 1.准备中 ，2.下载中 ，3 异常 ，4 完成 
 
     public TaskInfo(String downloadId, int taskId, String url, String fileName) {
         this.downloadTag = downloadId;
@@ -49,6 +51,13 @@ public class TaskInfo {
         this.cacheFile = fileName + ".cache";
     }
 
+    public long getEndBound() {
+        return endBound;
+    }
+
+    public void setEndBound(long endBound) {
+        this.endBound = endBound;
+    }
 
     public DownloadStatue getStatue() {
         return statue;
@@ -77,10 +86,9 @@ public class TaskInfo {
 
     @Override
     public String toString() {
-
         return "TaskInfo{" +
                 "id=" + id +
-                ", downloadTag=" + downloadTag +
+                ", downloadTag='" + downloadTag + '\'' +
                 ", taskId=" + taskId +
                 ", url='" + url + '\'' +
                 ", fileName='" + fileName + '\'' +
@@ -91,6 +99,8 @@ public class TaskInfo {
                 ", cacheFile='" + cacheFile + '\'' +
                 ", offeset=" + offeset +
                 ", currentLen=" + currentLen +
+                ", endBound=" + endBound +
+                ", statue=" + statue +
                 '}';
     }
 

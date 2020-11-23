@@ -23,6 +23,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:hint="输入下载链接"
+                android:text="http://wap.apk.anzhi.com/data5/apk/202009/08/cfe52fe6127e64a2085e602693e41670_14230200.apk"
                 />
         </LinearLayout>
       

@@ -1,11 +1,13 @@
 package com.tao.mydownloadlibrary.task;
 
-import android.text.TextUtils;
+
 import com.tao.mydownloadlibrary.callback.PrepareTaskCall;
 import com.tao.mydownloadlibrary.info.DownloadInfo;
 import com.tao.mydownloadlibrary.info.TaskInfo;
 import com.tao.mydownloadlibrary.utils.HttpUtil;
 import com.tao.mydownloadlibrary.utils.Lg;
+import com.tao.mydownloadlibrary.utils.TextUtils;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -26,6 +28,7 @@ public class PrepareTask implements Runnable {
         this.downloadInfo = downloadInfo;
         this.prepareTaskCall = prepareTaskCall;
     }
+
     @Override
     public void run() {
         try {
@@ -37,21 +40,28 @@ public class PrepareTask implements Runnable {
                 long length = response.body().contentLength();
                 downloadInfo.setTotalLenth(length);
                 Headers headers = response.headers();
-//                Lg.e(tag, " headers " + headers);
+                Lg.e(tag, " headers " + headers);
                 readFileName(headers);
                 usedRanges(headers);
+                if (length<1)
+                    downloadInfo.setThreadCount(1);
+
                 List<TaskInfo> taskInfoS = new ArrayList<>();
+
+                long block = length / downloadInfo.getThreadCount();
                 for (int j = 0; j < downloadInfo.getThreadCount(); j++) {
                     TaskInfo info = new TaskInfo(downloadInfo.getDownloadTag(), j, downloadInfo.getUrl(), downloadInfo.getFileName());
                     info.setTaskId(j);
                     info.setThreadCount(downloadInfo.getThreadCount());
                     info.setFileLen(length);
                     info.setProgressLen(0);
-                    info.setThreadLen(j == downloadInfo.getThreadCount() - 1 ? length / downloadInfo.getThreadCount() + length % downloadInfo.getThreadCount() : length / downloadInfo.getThreadCount());
                     info.setCacheFile(downloadInfo.getCachePath() + File.separator + downloadInfo.getDownloadTag() + File.separator + downloadInfo.getFileName() + "(" + j + ").cache");
-                    info.setOffeset(j * (length / downloadInfo.getThreadCount()));
+
+                    info.setOffeset(j * block);
+                    info.setEndBound(j == downloadInfo.getThreadCount() - 1 ? length - 1 : info.getOffeset() + block);
+                    info.setThreadLen( info.getEndBound()-info.getOffeset());
+
                     taskInfoS.add(info);
-//                    Lg.e(tag, info.toString());
                 }
                 downloadInfo.setTaskInfos(taskInfoS);
                 Thread.sleep(1);

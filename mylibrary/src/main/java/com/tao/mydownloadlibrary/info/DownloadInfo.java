@@ -1,11 +1,11 @@
 package com.tao.mydownloadlibrary.info;
 
-import android.text.TextUtils;
 
 import com.google.gson.annotations.Expose;
 import com.tao.mydownloadlibrary.DownloadStatue;
 import com.tao.mydownloadlibrary.callback.DownloadCall;
 import com.tao.mydownloadlibrary.utils.MD5Util;
+import com.tao.mydownloadlibrary.utils.TextUtils;
 
 import java.util.List;
 
