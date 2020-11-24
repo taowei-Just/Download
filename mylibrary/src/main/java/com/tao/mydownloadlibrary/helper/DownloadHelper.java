@@ -824,33 +824,62 @@ public class DownloadHelper implements IDownloader {
         });
 
         Lg.e( taskInfos.toString());
- 
         
-        RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
-        accessFile.setLength(downloadInfo.getTotalLenth());
-        
-        for (TaskInfo taskInfo : taskInfos) {
-            long offeset = taskInfo.getOffeset();
-            long threadLen = taskInfo.getThreadLen();
-            accessFile.seek(offeset);
-            File cacheFile = new File(taskInfo.getCacheFile());
-            FileInputStream inputStream = new FileInputStream(cacheFile);
+        if (downloadInfo.getTotalLenth()<1 || taskInfos.size()==1){
 
-            byte[] buff = new byte[1024 * 1024 * 3];
+            FileOutputStream accessFile = new FileOutputStream(file,true);
 
-            int len = 0;
-            while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
-                accessFile.write(buff, 0, len);
+            for (TaskInfo taskInfo : taskInfos) {
+                File cacheFile = new File(taskInfo.getCacheFile());
+                FileInputStream inputStream = new FileInputStream(cacheFile);
+
+                byte[] buff = new byte[1024 * 1024 * 3];
+
+                int len = 0;
+                while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
+                    accessFile.write(buff, 0, len);
+                }
+
+
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                
+                cacheFile.delete();
             }
-            cacheFile.delete();
-            try {
-                inputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            accessFile.close();
+        }else{
+            RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
+            accessFile.setLength(downloadInfo.getTotalLenth());
+
+            for (TaskInfo taskInfo : taskInfos) {
+                long offeset = taskInfo.getOffeset();
+                long threadLen = taskInfo.getThreadLen();
+                accessFile.seek(offeset);
+                File cacheFile = new File(taskInfo.getCacheFile());
+                FileInputStream inputStream = new FileInputStream(cacheFile);
+
+                byte[] buff = new byte[1024 * 1024 * 3];
+
+                int len = 0;
+                while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
+                    accessFile.write(buff, 0, len);
+                }
+
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                
+                cacheFile.delete();
             }
+            accessFile.close();
         }
-        accessFile.close();
-
+ 
+ 
         if (taskInfos.size() > 0) {
             try {
                 new File(taskInfos.get(0).getCacheFile()).getParentFile().delete();
@@ -858,6 +887,7 @@ public class DownloadHelper implements IDownloader {
                 e.printStackTrace();
             }
         }
+        
         downloadInfo.setMd5(MD5Util.getMD5fromBigFile(file));
     }
 
