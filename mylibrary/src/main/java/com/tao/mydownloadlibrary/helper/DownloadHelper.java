@@ -134,17 +134,15 @@ public class DownloadHelper implements IDownloader {
         return downloadHelper;
     }
 
-//    public void deleteDownloadInfoByUrl(String url) {
-//        deleteDownloadLine(url);
-//    }
+ 
 
 
-    public void deleteDownloadLine(final String url) {
+    public  synchronized void deleteDownloadLine(final String url) {
         String tag = MD5Util.md5(url);
         deleteDownloadLineByTag(tag);
     }
 
-    private void deleteDownloadLineByTag(String tag) {
+    private   synchronized  void deleteDownloadLineByTag(String tag) {
         BufferedReader bufferedReader = null;
 
         File file1 = new File(build.configPath);
@@ -198,7 +196,7 @@ public class DownloadHelper implements IDownloader {
             @Override
             public void run() {
                 DownloadInfo downloadRecode = deleteDownloadInfo(url, false);
-
+                
                 if (recodeVaild(downloadRecode)) {
                     try {
                         addDownload(url, downloadRecode.getPath(), downloadRecode.getFileName(), downloadCall);
@@ -543,6 +541,8 @@ public class DownloadHelper implements IDownloader {
 
     private void prepareDownload(DownloadInfo downloadInfo) {
 //        Lg.e("prepareDownload", downloadInfo);
+        deleteDownloadLine(downloadInfo.getUrl());
+        
         addDownloadInfoRecode(downloadInfo);
         saveDwnloadInfo2File(downloadInfo);
         perparePool.submit(new PrepareTask(downloadInfo, new MyPerpare()));
@@ -553,7 +553,7 @@ public class DownloadHelper implements IDownloader {
     }
 
 
-    private void excuteDownloadTask(DownloadInfo downloadInfo) {
+    private  void excuteDownloadTask(DownloadInfo downloadInfo) {
         List<Future> futureList = new ArrayList<>();
         List<TaskInfo> taskInfoS = downloadInfo.getTaskInfos();
         for (int i = 0; i < taskInfoS.size(); i++) {
@@ -822,7 +822,7 @@ public class DownloadHelper implements IDownloader {
                 return taskInfo.getTaskId() -t1.getTaskId();
             }
         });
-
+        
         Lg.e( taskInfos.toString());
         
         if (downloadInfo.getTotalLenth()<1 || taskInfos.size()==1){
@@ -839,15 +839,15 @@ public class DownloadHelper implements IDownloader {
                 while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
                     accessFile.write(buff, 0, len);
                 }
-
-
+                
                 try {
                     inputStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                
+
                 cacheFile.delete();
+
             }
             accessFile.close();
         }else{
@@ -873,13 +873,10 @@ public class DownloadHelper implements IDownloader {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                
                 cacheFile.delete();
             }
             accessFile.close();
         }
- 
- 
         if (taskInfos.size() > 0) {
             try {
                 new File(taskInfos.get(0).getCacheFile()).getParentFile().delete();
@@ -909,7 +906,6 @@ public class DownloadHelper implements IDownloader {
             downloadInfo.getDownloadCall().onProgress(downloadInfo, info);
             lastProgressTime = System.currentTimeMillis();
         }
-
     }
 
     private synchronized long loadTaskProgress(List<TaskInfo> taskInfos) {
@@ -938,6 +934,7 @@ public class DownloadHelper implements IDownloader {
                 taskInfoS.clear();
                 taskInfoS.add(taskInfo);
             }
+//            deleteDownloadLine(downloadInfo.getUrl());
             saveDwnloadInfo2File(downloadInfo);
             excuteDownloadTask(downloadInfo);
         }
@@ -980,7 +977,7 @@ public class DownloadHelper implements IDownloader {
         }
     }
 
-    public void saveDwnloadInfo2File(DownloadInfo downloadInfo) {
+    public  synchronized  void saveDwnloadInfo2File(DownloadInfo downloadInfo) {
         if (downloadInfo == null)
             return;
         String s = MyGosn.toJson(downloadInfo, "DownloadCall");
