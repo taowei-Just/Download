@@ -42,8 +42,29 @@ public class DownloadInfo {
     List<TaskInfo> taskInfos;
     @Expose
     int progressPersent;
+
     private String cachePath;
 
+
+    private long speed;
+
+    private long lastProgress;
+
+    public long getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(long speed) {
+        this.speed = speed;
+    }
+
+    public long getLastProgress() {
+        return lastProgress;
+    }
+
+    public void setLastProgress(long lastProgress) {
+        this.lastProgress = lastProgress;
+    }
 
     public DownloadInfo(String url) throws Exception {
         boolean empty = false;
@@ -172,7 +193,7 @@ public class DownloadInfo {
     }
 
     public String getCachePath() {
-        return TextUtils.isEmpty(cachePath)? getPath():cachePath;
+        return TextUtils.isEmpty(cachePath) ? getPath() : cachePath;
     }
 
     public void setCachePath(String cachePath) {

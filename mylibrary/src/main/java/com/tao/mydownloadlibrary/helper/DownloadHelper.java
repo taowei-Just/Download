@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -47,6 +48,7 @@ public class DownloadHelper implements IDownloader {
     private long lastProgressTime;
     private Build build;
     private String tag = getClass().getSimpleName();
+    private static String spilitstr = ":::";
 
     private DownloadHelper() {
         loadInfoPool = Executors.newFixedThreadPool(10);
@@ -134,15 +136,13 @@ public class DownloadHelper implements IDownloader {
         return downloadHelper;
     }
 
- 
 
-
-    public  synchronized void deleteDownloadLine(final String url) {
+    public synchronized void deleteDownloadLine(final String url) {
         String tag = MD5Util.md5(url);
         deleteDownloadLineByTag(tag);
     }
 
-    private   synchronized  void deleteDownloadLineByTag(String tag) {
+    private synchronized void deleteDownloadLineByTag(String tag) {
         BufferedReader bufferedReader = null;
 
         File file1 = new File(build.configPath);
@@ -162,7 +162,7 @@ public class DownloadHelper implements IDownloader {
             while ((line = bufferedReader.readLine()) != null) {
 //                Lg.e(line);
                 if (line.contains(tag)) {
-                    String[] split = line.split(":");
+                    String[] split = line.split(spilitstr);
                     if (split.length < 2) {
                         continue;
                     }
@@ -196,7 +196,7 @@ public class DownloadHelper implements IDownloader {
             @Override
             public void run() {
                 DownloadInfo downloadRecode = deleteDownloadInfo(url, false);
-                
+
                 if (recodeVaild(downloadRecode)) {
                     try {
                         addDownload(url, downloadRecode.getPath(), downloadRecode.getFileName(), downloadCall);
@@ -410,9 +410,9 @@ public class DownloadHelper implements IDownloader {
                 || TextUtils.isEmpty(downloadRecode.getUrl())
         )
             return false;
-        
+
         File file1 = new File(downloadRecode.getPath(), downloadRecode.getFileName());
-        
+
         if (file1.exists()) {
             try {
                 String md5fromBigFile = MD5Util.getMD5fromBigFile(file1);
@@ -423,7 +423,7 @@ public class DownloadHelper implements IDownloader {
                 e.printStackTrace();
             }
         }
-        
+
         List<TaskInfo> taskInfos = downloadRecode.getTaskInfos();
         if (taskInfos == null)
             return false;
@@ -453,7 +453,7 @@ public class DownloadHelper implements IDownloader {
             while ((line = bufferedReader.readLine()) != null) {
 //                Lg.e(line);
                 if (line.contains(tag)) {
-                    String[] split = line.split(":");
+                    String[] split = line.split(spilitstr);
                     if (split.length < 2) {
                         continue;
                     }
@@ -542,7 +542,7 @@ public class DownloadHelper implements IDownloader {
     private void prepareDownload(DownloadInfo downloadInfo) {
 //        Lg.e("prepareDownload", downloadInfo);
         deleteDownloadLine(downloadInfo.getUrl());
-        
+
         addDownloadInfoRecode(downloadInfo);
         saveDwnloadInfo2File(downloadInfo);
         perparePool.submit(new PrepareTask(downloadInfo, new MyPerpare()));
@@ -552,8 +552,7 @@ public class DownloadHelper implements IDownloader {
         }
     }
 
-
-    private  void excuteDownloadTask(DownloadInfo downloadInfo) {
+    private void excuteDownloadTask(DownloadInfo downloadInfo) {
         List<Future> futureList = new ArrayList<>();
         List<TaskInfo> taskInfoS = downloadInfo.getTaskInfos();
         for (int i = 0; i < taskInfoS.size(); i++) {
@@ -625,7 +624,7 @@ public class DownloadHelper implements IDownloader {
             String line = null;
             while ((line = bufferedReader.readLine()) != null) {
 //                Lg.e(line);
-                String[] split = line.split(":");
+                String[] split = line.split(spilitstr);
                 if (split.length < 2) {
                     continue;
                 }
@@ -794,13 +793,13 @@ public class DownloadHelper implements IDownloader {
     }
 
     /**
-     * 
-     * 有一个问题  当文件长度未获取到时则 不能使用 RandomAccessFile 
+     * 有一个问题  当文件长度未获取到时则 不能使用 RandomAccessFile
+     *
      * @param downloadInfo
      * @param taskInfos
      * @throws Exception
      */
-    private void mergeFiles(DownloadInfo downloadInfo, List<TaskInfo> taskInfos) throws Exception {
+    private void mergeFiles(DownloadInfo downloadInfo, final List<TaskInfo> taskInfos) throws Exception {
         File file = new File(downloadInfo.getPath() + File.separator + downloadInfo.getFileName());
         if (!file.exists()) {
             file.getParentFile().mkdirs();
@@ -819,15 +818,15 @@ public class DownloadHelper implements IDownloader {
         Collections.sort(taskInfos, new Comparator<TaskInfo>() {
             @Override
             public int compare(TaskInfo taskInfo, TaskInfo t1) {
-                return taskInfo.getTaskId() -t1.getTaskId();
+                return taskInfo.getTaskId() - t1.getTaskId();
             }
         });
-        
-        Lg.e( taskInfos.toString());
-        
-        if (downloadInfo.getTotalLenth()<1 || taskInfos.size()==1){
 
-            FileOutputStream accessFile = new FileOutputStream(file,true);
+        Lg.e(taskInfos.toString());
+
+        if (downloadInfo.getTotalLenth() < 1 || taskInfos.size() == 1) {
+
+            FileOutputStream accessFile = new FileOutputStream(file, true);
 
             for (TaskInfo taskInfo : taskInfos) {
                 File cacheFile = new File(taskInfo.getCacheFile());
@@ -839,7 +838,7 @@ public class DownloadHelper implements IDownloader {
                 while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
                     accessFile.write(buff, 0, len);
                 }
-                
+
                 try {
                     inputStream.close();
                 } catch (IOException e) {
@@ -850,7 +849,7 @@ public class DownloadHelper implements IDownloader {
 
             }
             accessFile.close();
-        }else{
+        } else {
             RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
             accessFile.setLength(downloadInfo.getTotalLenth());
 
@@ -860,31 +859,38 @@ public class DownloadHelper implements IDownloader {
                 accessFile.seek(offeset);
                 File cacheFile = new File(taskInfo.getCacheFile());
                 FileInputStream inputStream = new FileInputStream(cacheFile);
-
                 byte[] buff = new byte[1024 * 1024 * 3];
-
                 int len = 0;
                 while ((len = inputStream.read(buff, 0, buff.length)) != -1) {
                     accessFile.write(buff, 0, len);
                 }
-
                 try {
                     inputStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                cacheFile.delete();
             }
             accessFile.close();
         }
         if (taskInfos.size() > 0) {
-            try {
-                new File(taskInfos.get(0).getCacheFile()).getParentFile().delete();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            perparePool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        File[] files = new File(taskInfos.get(0).getCacheFile()).getParentFile().listFiles();
+                        Thread.sleep(500);
+                        for (File file1 : files) {
+                       
+                            boolean delete = file1.delete();
+                            boolean delete1 = file1.getParentFile().delete();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         }
-        
+
         downloadInfo.setMd5(MD5Util.getMD5fromBigFile(file));
     }
 
@@ -894,6 +900,7 @@ public class DownloadHelper implements IDownloader {
 
         if (downloadInfo == null)
             return;
+
         downloadInfo.setProgress(loadTaskProgress(downloadInfo.getTaskInfos()));
 
 
@@ -902,6 +909,11 @@ public class DownloadHelper implements IDownloader {
         if (null == downloadInfo.getDownloadCall())
             return;
         if (lastProgressTime == 0 || (System.currentTimeMillis() - lastProgressTime >= 1 * 1000)) {
+            
+            downloadInfo.setSpeed( downloadInfo.getProgress() - downloadInfo.getLastProgress());
+            
+            downloadInfo.setLastProgress(downloadInfo.getProgress());
+            
             downloadInfo.getDownloadCall().onProgress(downloadInfo);
             downloadInfo.getDownloadCall().onProgress(downloadInfo, info);
             lastProgressTime = System.currentTimeMillis();
@@ -965,7 +977,7 @@ public class DownloadHelper implements IDownloader {
                 file.createNewFile();
             }
 //            String str = downloadInfo.getDownloadTag() + ":" + new File(build.context.getExternalCacheDir() + File.separator + "download" + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
-            String str = downloadInfo.getDownloadTag() + ":" + new File(build.cachePath + File.separator + "download" + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
+            String str = downloadInfo.getDownloadTag() + spilitstr + new File(build.cachePath + File.separator + "download" + File.separator + "downloadInfos" + File.separator + downloadInfo.getDownloadTag() + ".info").getAbsolutePath();
 //            Lg.e(str);
             WriteStreamAppend.method1(file.getAbsolutePath(), str + "\n");
 //            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file ,true)));
@@ -977,7 +989,7 @@ public class DownloadHelper implements IDownloader {
         }
     }
 
-    public  synchronized  void saveDwnloadInfo2File(DownloadInfo downloadInfo) {
+    public synchronized void saveDwnloadInfo2File(DownloadInfo downloadInfo) {
         if (downloadInfo == null)
             return;
         String s = MyGosn.toJson(downloadInfo, "DownloadCall");
@@ -1060,6 +1072,31 @@ public class DownloadHelper implements IDownloader {
             return this;
         }
     }
+    public static String getFormatSize(double size) {
+        double kiloByte = size/1024;
+        if(kiloByte < 1) {
+            return size + "Byte(s)";
+        }
 
+        double megaByte = kiloByte/1024;
+        if(megaByte < 1) {
+            BigDecimal result1 = new BigDecimal(Double.toString(kiloByte));
+            return result1.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString() + "KB";
+        }
+
+        double gigaByte = megaByte/1024;
+        if(gigaByte < 1) {
+            BigDecimal result2  = new BigDecimal(Double.toString(megaByte));
+            return result2.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString() + "MB";
+        }
+
+        double teraBytes = gigaByte/1024;
+        if(teraBytes < 1) {
+            BigDecimal result3 = new BigDecimal(Double.toString(gigaByte));
+            return result3.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString() + "GB";
+        }
+        BigDecimal result4 = new BigDecimal(teraBytes);
+        return result4.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString() + "TB";
+    }
 
 }
