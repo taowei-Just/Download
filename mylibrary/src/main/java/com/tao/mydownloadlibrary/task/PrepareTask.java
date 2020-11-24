@@ -111,12 +111,18 @@ public class PrepareTask implements Runnable {
 
     public String getfileName(String url) {
         String substring = url.substring(url.lastIndexOf("/") + 1);
+        if (substring.contains("?"))
+        substring  = substring.split("\\?")[0];
+        Lg.e(substring);
+
         // 清除掉所有特殊字符 
 //        String regEx="[`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Pattern p = Pattern.compile("[`~☆★!@#$%^&*()+=|{}':;,\\[\\]》·<>/?~！@#￥%……（）——+|{}【】‘；：”“’。，、？]");//去除特殊字符
         Matcher m = p.matcher(substring);
 
         substring = m.replaceAll("").trim();
+
+        Lg.e(substring);
         if (substring.toLowerCase().contains("name=")) {
             String[] split = substring.split("name=");
             substring = split[split.length - 1];
